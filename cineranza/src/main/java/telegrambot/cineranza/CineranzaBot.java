@@ -100,10 +100,12 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	        
 	        if (call_data.equals("/new_estrenoNacionalSi")) {
 	        	this.film.setEstrenoNacional(true);
-	        	this.process_response += "\n\nEstreno nacional";
+	        	this.process = "/new_edadMinima";
+	        	this.process_response += "\nEstreno nacional";
 	        	editMessage(chat_id, message_id, "Edad mínima:");
 	        } else if (call_data.equals("/new_estrenoNacionalNo")) {
 	            this.process = "/new_edadMinima";
+	            this.film.setEstrenoNacional(false);
 	            editMessage(chat_id, message_id, "Edad mínima:");
 	        } else if (call_data.equals("/new_cineVerano")) {
 	        	this.film.setCine(false);
