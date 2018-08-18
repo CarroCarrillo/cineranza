@@ -108,14 +108,17 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		    	} else if (process.equals("/new_hour")) {
 		    		String icono = "";
 		    		String hourSplit[] = message_text.split(":");
+		    		int hourInt = Integer.parseInt(hourSplit[0]);
+		    		
+		    		if(hourInt > 12) { hourInt -= 12; }
 		    		
 		    		if(hourSplit[1].equals("00")) {
-		    			icono = EmojiParser.parseToUnicode(":clock" + hourSplit[0] + ":");
+		    			icono = EmojiParser.parseToUnicode(":clock" + hourInt + ": ");
 		    		}else if(hourSplit[1].equals("30")) {
-		    			icono = EmojiParser.parseToUnicode(":clock" + hourSplit[0] + hourSplit[1] + ":");
+		    			icono = EmojiParser.parseToUnicode(":clock" + hourInt + hourSplit[1] + ": ");
 		    		}
 		    		
-		    		this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes + " de " + this.anyo + " a las " + icono + " " + message_text);
+		    		this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes + " de " + this.anyo + " a las " + icono + message_text);
 		    		this.process = null;
 		    		message.setChatId(chat_id).setText("¿Quieres añadir otro horario?");
 		    		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
