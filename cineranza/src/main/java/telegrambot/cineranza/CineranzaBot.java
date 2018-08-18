@@ -61,8 +61,8 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		    		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
 		            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
 		            List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
-		            rowInline.add(new InlineKeyboardButton().setText(":white_check_mark: Sí").setCallbackData("/new_estrenoNacionalSi"));
-		            rowInline.add(new InlineKeyboardButton().setText(":x: No").setCallbackData("/new_estrenoNacionalNo"));
+		            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":white_check_mark: Sí")).setCallbackData("/new_estrenoNacionalSi"));
+		            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":x: No")).setCallbackData("/new_estrenoNacionalNo"));
 		            // Set the keyboard to the markup
 		            rowsInline.add(rowInline);
 		            // Add it to the message
@@ -106,14 +106,23 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		                e.printStackTrace();
 		            }
 		    	} else if (process.equals("/new_hour")) {
-		    		this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes + " de " + this.anyo + " a las " + message_text);
+		    		String icono = "";
+		    		String hourSplit[] = message_text.split(":");
+		    		
+		    		if(hourSplit[1].equals("00")) {
+		    			icono = EmojiParser.parseToUnicode(":clock" + hourSplit[0] + ":");
+		    		}else if(hourSplit[1].equals("30")) {
+		    			icono = EmojiParser.parseToUnicode(":clock" + hourSplit[0] + hourSplit[1] + ":");
+		    		}
+		    		
+		    		this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes + " de " + this.anyo + " a las " + icono + " " + message_text);
 		    		this.process = null;
 		    		message.setChatId(chat_id).setText("¿Quieres añadir otro horario?");
 		    		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
 		            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
 		            List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
-		            rowInline.add(new InlineKeyboardButton().setText(":white_check_mark: Sí").setCallbackData("/new_otroHorarioSi"));
-		            rowInline.add(new InlineKeyboardButton().setText(":x: No").setCallbackData("/new_otroHorarioNo"));
+		            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":white_check_mark: Sí")).setCallbackData("/new_otroHorarioSi"));
+		            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":x: No")).setCallbackData("/new_otroHorarioNo"));
 		            // Set the keyboard to the markup
 		            rowsInline.add(rowInline);
 		            // Add it to the message
