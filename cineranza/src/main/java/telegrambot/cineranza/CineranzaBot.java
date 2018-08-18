@@ -1,7 +1,9 @@
 package telegrambot.cineranza;
 
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -22,6 +24,9 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	private Film film = new Film();
 	private String process_response = "";
 	private int contHorario = 0;
+	private int dia;
+	private String mes;
+	private int anyo;
 	
     public void onUpdateReceived(Update update) {
     	
@@ -34,6 +39,7 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	        if(process == null) {
 		        if (update.getMessage().getText().equals("/new")) {
 		        	this.process = "/new_film";
+		        	this.contHorario = 0;
 		        	message.setChatId(chat_id)
 		                   .setText(EmojiParser.parseToUnicode(":clapper: Nombre de la película"));		
 		        	try {
@@ -55,8 +61,8 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		    		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
 		            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
 		            List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
-		            rowInline.add(new InlineKeyboardButton().setText("Sí").setCallbackData("/new_estrenoNacionalSi"));
-		            rowInline.add(new InlineKeyboardButton().setText("No").setCallbackData("/new_estrenoNacionalNo"));
+		            rowInline.add(new InlineKeyboardButton().setText(":white_check_mark: Sí").setCallbackData("/new_estrenoNacionalSi"));
+		            rowInline.add(new InlineKeyboardButton().setText(":x: No").setCallbackData("/new_estrenoNacionalNo"));
 		            // Set the keyboard to the markup
 		            rowsInline.add(rowInline);
 		            // Add it to the message
@@ -89,7 +95,37 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		            } catch (TelegramApiException e) {
 		                e.printStackTrace();
 		            }
-		    	}		    	
+		    	} else if (process.equals("/new_year")) {
+		    		this.anyo = Integer.parseInt(message_text);
+		    		this.process = "/new_hour";
+		    		message.setChatId(chat_id)
+	                   .setText(EmojiParser.parseToUnicode(":timer_clock: Hora (hh:mm) del horario " + this.contHorario + ":"));		
+		        	try {
+		                execute(message); // Manda el objeto mensaje al usuario
+		            } catch (TelegramApiException e) {
+		                e.printStackTrace();
+		            }
+		    	} else if (process.equals("/new_hour")) {
+		    		this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes + " de " + this.anyo + " a las " + message_text);
+		    		this.process = null;
+		    		message.setChatId(chat_id).setText("¿Quieres añadir otro horario?");
+		    		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+		            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
+		            List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
+		            rowInline.add(new InlineKeyboardButton().setText(":white_check_mark: Sí").setCallbackData("/new_otroHorarioSi"));
+		            rowInline.add(new InlineKeyboardButton().setText(":x: No").setCallbackData("/new_otroHorarioNo"));
+		            // Set the keyboard to the markup
+		            rowsInline.add(rowInline);
+		            // Add it to the message
+		            markupInline.setKeyboard(rowsInline);
+		            message.setReplyMarkup(markupInline);
+		            
+		            try {
+		                execute(message); // Manda el objeto mensaje al usuario
+		            } catch (TelegramApiException e) {
+		                e.printStackTrace();
+		            }
+		    	}
 		    }
 	
 	    } else if (update.hasCallbackQuery()) {
@@ -118,8 +154,15 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	            this.process_response += EmojiParser.parseToUnicode("\n:snowflake: Cine de invierno.");
 	            horario(chat_id, message_id);
 	        } else if(call_data.startsWith("/new_diaMes")) {
-	        	callBackDiaMes(call_data, chat_id);
-	        } else {
+	        	callBackDiaMes(call_data, chat_id, message_id);
+	        } else if(call_data.startsWith("/new_mes")) {
+	        	callBackMes(call_data, chat_id, message_id);
+	        } else if(call_data.equals("/new_otroHorarioSi")) {
+	        	horario(chat_id, message_id);
+	        } else if(call_data.equals("/new_otroHorarioNo")) {
+	        	this.sendFilm(chat_id);
+	        }
+	        else {
 	        	editMessage(chat_id, message_id, "Callback erróneo.");
 	        }
 	    } else {
@@ -136,8 +179,8 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	         }
 	    }
     }
-    
-    public void sendFilm(long chat_id) {
+
+	public void sendFilm(long chat_id) {
     	SendMessage message = new SendMessage().setChatId(chat_id)
                 .setText(this.process_response);
 	     try {
@@ -241,12 +284,75 @@ public class CineranzaBot extends TelegramLongPollingBot {
         }
     }
     
-    public void callBackDiaMes(String call_data, long chat_id) {
-    	this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + call_data.split("/new_diaMes")[1]);
-    	sendFilm(chat_id);
+    public void callBackDiaMes(String call_data, long chat_id, int message_id) {
+    	this.dia = Integer.parseInt(call_data.split("/new_diaMes")[1]);
+    	askMonth(chat_id, message_id);
     }
+    
+    private void callBackMes(String call_data, long chat_id, int message_id) {
+		this.mes = call_data.split("/new_mes")[1];
+		askYear(chat_id, message_id);
+	}
 
-    public String getBotUsername() {
+    private void askYear(long chat_id, int message_id) {
+		SendMessage message = new SendMessage();
+		this.process = "/new_year";
+		message.setChatId(chat_id).setText("Año del horario " + this.contHorario + ":");
+		
+		try {
+            execute(message); // Manda el objeto mensaje al usuario
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+	}
+
+	private void askMonth(long chat_id, int message_id) {
+    	EditMessageText new_message = new EditMessageText();
+		this.process = null;
+		new_message.setChatId(chat_id).setMessageId(message_id)
+        .setText("Mes del horario " + contHorario + ":");
+		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
+        List<InlineKeyboardButton> rowInline1 = new ArrayList<InlineKeyboardButton>();
+        rowInline1.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Enero")).setCallbackData("/new_mesEnero"));
+        rowInline1.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Febrero")).setCallbackData("/new_mesFebrero"));
+        rowInline1.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Marzo")).setCallbackData("/new_mesMarzo"));
+        // Set the keyboard to the markup
+        rowsInline.add(rowInline1);
+        
+        List<InlineKeyboardButton> rowInline2 = new ArrayList<InlineKeyboardButton>();
+        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Abril")).setCallbackData("/new_mesAbril"));
+        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Mayo")).setCallbackData("/new_mesMayo"));
+        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Junio")).setCallbackData("/new_mesJunio"));
+        // Set the keyboard to the markup
+        rowsInline.add(rowInline2);
+        
+        List<InlineKeyboardButton> rowInline3 = new ArrayList<InlineKeyboardButton>();
+        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Julio")).setCallbackData("/new_mesJulio"));
+        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Agosto")).setCallbackData("/new_mesAgosto"));
+        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Septiembre")).setCallbackData("/new_mesSeptiembre"));
+        // Set the keyboard to the markup
+        rowsInline.add(rowInline3);
+        
+        List<InlineKeyboardButton> rowInline4 = new ArrayList<InlineKeyboardButton>();
+        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Octubre")).setCallbackData("/new_mesOctubre"));
+        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Noviembre")).setCallbackData("/new_mesNoviembre"));
+        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("Diciembre")).setCallbackData("/new_mesDiciembre"));
+        // Set the keyboard to the markup
+        rowsInline.add(rowInline4);
+        
+        // Add it to the message
+        markupInline.setKeyboard(rowsInline);
+        new_message.setReplyMarkup(markupInline);
+        
+        try {
+            execute(new_message); // Manda el objeto mensaje al usuario
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+	}
+
+	public String getBotUsername() {
         return "cineranza_bot";
     }
 

@@ -16,6 +16,9 @@ public class Film {
 		this.horario = new ArrayList<Date>();
 	}
 
+	public void addHorario(Date date) {
+		this.horario.add(date);
+	}
 	public String getName() {
 		return name;
 	}
