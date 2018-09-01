@@ -24,6 +24,7 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	private int contHorario = 0;
 	private int dia;
 	private String mes;
+	private boolean mismaHora;
 	
     public void onUpdateReceived(Update update) {
     	
@@ -37,6 +38,7 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		        if (update.getMessage().getText().equals("/new")) {
 		        	this.process = "/new_film";
 		        	this.contHorario = 0;
+		        	this.mismaHora = false;
 		        	message.setChatId(chat_id)
 		                   .setText(EmojiParser.parseToUnicode(":clapper: Nombre de la película"));		
 		        	try {
@@ -114,12 +116,12 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	        	this.film.setCine(false);
 	            this.process = null;
 	            this.process_response += EmojiParser.parseToUnicode("\n:sunny: Cine de verano");
-	            horario(chat_id, message_id);
+	            mismaHora(chat_id, message_id);
 	        } else if (call_data.equals("/new_cineInvierno")) {
 	        	this.film.setCine(true);
 	            this.process = null;
 	            this.process_response += EmojiParser.parseToUnicode("\n:snowflake: Cine de invierno");
-	            horario(chat_id, message_id);
+	            mismaHora(chat_id, message_id);
 	        } else if(call_data.startsWith("/new_diaMes")) {
 	        	callBackDiaMes(call_data, chat_id, message_id);
 	        } else if(call_data.startsWith("/new_mes")) {
@@ -127,40 +129,17 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	        } else if(call_data.equals("/new_otroHorarioSi")) {
 	        	horario(chat_id, message_id);
 	        } else if(call_data.equals("/new_otroHorarioNo")) {
+	        	this.process_response += EmojiParser.parseToUnicode("\n" + icono(call_data) + call_data.split("/new_hour")[1]);
 	        	this.sendFilm(chat_id);
+	        } else if(call_data.startsWith("/new_mismaHora")) {
+	        	String mismaHoraString = call_data.split("/new_mismaHora")[1];
+	        	this.mismaHora = mismaHoraString.equals("Si") ? true : false;
+	        	horario(chat_id, message_id);
 	        } else if(call_data.startsWith("/new_hour")) {
-	        	String icono = "";
-	    		String hourSplit[] = call_data.split("/new_hour")[1].split(":");
-	    		int hourInt = Integer.parseInt(hourSplit[0]);
-	    		
-	    		if(hourInt > 12) { hourInt -= 12; }
-	    		
-	    		if(hourSplit[1].equals("00")) {
-	    			icono = EmojiParser.parseToUnicode(":clock" + hourInt + ": ");
-	    		}else if(hourSplit[1].equals("30")) {
-	    			icono = EmojiParser.parseToUnicode(":clock" + hourInt + hourSplit[1] + ": ");
-	    		}
-	    		
-	    		SendMessage message = new SendMessage();
-	    		this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes + " a las " + icono + call_data.split("/new_hour")[1]);
-	    		this.process = null;
-	    		message.setChatId(chat_id).setText("¿Quieres añadir otro horario?");
-	    		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-	            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
-	            List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
-	            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":white_check_mark: Sí")).setCallbackData("/new_otroHorarioSi"));
-	            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":x: No")).setCallbackData("/new_otroHorarioNo"));
-	            // Set the keyboard to the markup
-	            rowsInline.add(rowInline);
-	            // Add it to the message
-	            markupInline.setKeyboard(rowsInline);
-	            message.setReplyMarkup(markupInline);
-	            
-	            try {
-	                execute(message); // Manda el objeto mensaje al usuario
-	            } catch (TelegramApiException e) {
-	                e.printStackTrace();
-	            }
+	        	String icono = icono(call_data);
+
+	    		this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes.toLowerCase() + " a las " + icono + call_data.split("/new_hour")[1]);
+	    		otroHorario(chat_id);
 	        }
 	        else {
 	        	editMessage(chat_id, message_id, "Callback erróneo.");
@@ -179,6 +158,65 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	         }
 	    }
     }
+
+	private String icono(String call_data) {
+		String icono = "";
+		String hourSplit[] = call_data.split("/new_hour")[1].split(":");
+		int hourInt = Integer.parseInt(hourSplit[0]);
+		
+		if(hourInt > 12) { hourInt -= 12; }
+		
+		if(hourSplit[1].equals("00")) {
+			icono = EmojiParser.parseToUnicode(":clock" + hourInt + ": ");
+		}else if(hourSplit[1].equals("30")) {
+			icono = EmojiParser.parseToUnicode(":clock" + hourInt + hourSplit[1] + ": ");
+		}
+		
+		return icono;
+	}
+
+	private void otroHorario(long chat_id) {
+		SendMessage message = new SendMessage();
+		this.process = null;
+		message.setChatId(chat_id).setText("¿Quieres añadir otro horario?");
+		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
+        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":white_check_mark: Sí")).setCallbackData("/new_otroHorarioSi"));
+        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":x: No")).setCallbackData("/new_otroHorarioNo"));
+        // Set the keyboard to the markup
+        rowsInline.add(rowInline);
+        // Add it to the message
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+        
+        try {
+            execute(message); // Manda el objeto mensaje al usuario
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+	}
+
+	private void mismaHora(long chat_id, int message_id) {
+		SendMessage message = new SendMessage();
+		message.setChatId(chat_id).setText("¿Todos los horarios tienen la misma hora?");
+		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
+        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":white_check_mark: Sí")).setCallbackData("/new_mismaHoraSi"));
+        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":x: No")).setCallbackData("/new_mismaHoraNo"));
+        // Set the keyboard to the markup
+        rowsInline.add(rowInline);
+        // Add it to the message
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+        
+        try {
+            execute(message); // Manda el objeto mensaje al usuario
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+	}
 
 	public void sendFilm(long chat_id) {
     	SendMessage message = new SendMessage().setChatId(chat_id)
@@ -215,7 +253,7 @@ public class CineranzaBot extends TelegramLongPollingBot {
     	EditMessageText new_message = new EditMessageText();
 		this.process = null;
 		new_message.setChatId(chat_id).setMessageId(message_id)
-        .setText("Día de la semana del horario " + ++contHorario + ":");
+        .setText("Día del horario " + ++contHorario + ":");
 		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
         List<InlineKeyboardButton> rowInline1 = new ArrayList<InlineKeyboardButton>();
@@ -293,61 +331,67 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		this.mes = call_data.split("/new_mes")[1];
 		this.process = null;
 		SendMessage message = new SendMessage();
-		message.setChatId(chat_id)
-           .setText(EmojiParser.parseToUnicode(":timer_clock: Hora del horario " + this.contHorario + ":"));	
 		
-		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
-        List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
-        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:00")).setCallbackData("/new_hour17:00"));
-        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:15")).setCallbackData("/new_hour17:15"));
-        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:30")).setCallbackData("/new_hour17:30"));
-        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:45")).setCallbackData("/new_hour17:45"));
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline);
-        
-        List<InlineKeyboardButton> rowInline2 = new ArrayList<InlineKeyboardButton>();
-        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:00")).setCallbackData("/new_hour18:00"));
-        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:15")).setCallbackData("/new_hour18:15"));
-        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:30")).setCallbackData("/new_hour18:30"));
-        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:45")).setCallbackData("/new_hour18:45"));
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline2);
-        
-        List<InlineKeyboardButton> rowInline3 = new ArrayList<InlineKeyboardButton>();
-        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:00")).setCallbackData("/new_hour19:00"));
-        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:15")).setCallbackData("/new_hour19:15"));
-        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:30")).setCallbackData("/new_hour19:30"));
-        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:45")).setCallbackData("/new_hour19:45"));
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline3);
-        
-        List<InlineKeyboardButton> rowInline4 = new ArrayList<InlineKeyboardButton>();
-        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:00")).setCallbackData("/new_hour20:00"));
-        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:15")).setCallbackData("/new_hour20:15"));
-        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:30")).setCallbackData("/new_hour20:30"));
-        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:45")).setCallbackData("/new_hour20:45"));
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline4);
-        
-        List<InlineKeyboardButton> rowInline5 = new ArrayList<InlineKeyboardButton>();
-        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:00")).setCallbackData("/new_hour21:00"));
-        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:15")).setCallbackData("/new_hour21:15"));
-        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:30")).setCallbackData("/new_hour21:30"));
-        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:45")).setCallbackData("/new_hour21:45"));
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline5);
-        
-        List<InlineKeyboardButton> rowInline6 = new ArrayList<InlineKeyboardButton>();
-        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:00")).setCallbackData("/new_hour22:00"));
-        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:15")).setCallbackData("/new_hour22:15"));
-        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:30")).setCallbackData("/new_hour22:30"));
-        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:45")).setCallbackData("/new_hour22:45"));
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline6);
-        // Add it to the message
-        markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
+		if(!this.mismaHora) {
+			message.setChatId(chat_id)
+	           .setText(EmojiParser.parseToUnicode(":timer_clock: Hora del horario " + this.contHorario + ":"));	
+			
+			InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+	        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
+	        List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
+	        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:00")).setCallbackData("/new_hour17:00"));
+	        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:15")).setCallbackData("/new_hour17:15"));
+	        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:30")).setCallbackData("/new_hour17:30"));
+	        rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("17:45")).setCallbackData("/new_hour17:45"));
+	        // Set the keyboard to the markup
+	        rowsInline.add(rowInline);
+	        
+	        List<InlineKeyboardButton> rowInline2 = new ArrayList<InlineKeyboardButton>();
+	        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:00")).setCallbackData("/new_hour18:00"));
+	        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:15")).setCallbackData("/new_hour18:15"));
+	        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:30")).setCallbackData("/new_hour18:30"));
+	        rowInline2.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("18:45")).setCallbackData("/new_hour18:45"));
+	        // Set the keyboard to the markup
+	        rowsInline.add(rowInline2);
+	        
+	        List<InlineKeyboardButton> rowInline3 = new ArrayList<InlineKeyboardButton>();
+	        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:00")).setCallbackData("/new_hour19:00"));
+	        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:15")).setCallbackData("/new_hour19:15"));
+	        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:30")).setCallbackData("/new_hour19:30"));
+	        rowInline3.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("19:45")).setCallbackData("/new_hour19:45"));
+	        // Set the keyboard to the markup
+	        rowsInline.add(rowInline3);
+	        
+	        List<InlineKeyboardButton> rowInline4 = new ArrayList<InlineKeyboardButton>();
+	        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:00")).setCallbackData("/new_hour20:00"));
+	        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:15")).setCallbackData("/new_hour20:15"));
+	        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:30")).setCallbackData("/new_hour20:30"));
+	        rowInline4.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("20:45")).setCallbackData("/new_hour20:45"));
+	        // Set the keyboard to the markup
+	        rowsInline.add(rowInline4);
+	        
+	        List<InlineKeyboardButton> rowInline5 = new ArrayList<InlineKeyboardButton>();
+	        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:00")).setCallbackData("/new_hour21:00"));
+	        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:15")).setCallbackData("/new_hour21:15"));
+	        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:30")).setCallbackData("/new_hour21:30"));
+	        rowInline5.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("21:45")).setCallbackData("/new_hour21:45"));
+	        // Set the keyboard to the markup
+	        rowsInline.add(rowInline5);
+	        
+	        List<InlineKeyboardButton> rowInline6 = new ArrayList<InlineKeyboardButton>();
+	        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:00")).setCallbackData("/new_hour22:00"));
+	        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:15")).setCallbackData("/new_hour22:15"));
+	        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:30")).setCallbackData("/new_hour22:30"));
+	        rowInline6.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode("22:45")).setCallbackData("/new_hour22:45"));
+	        // Set the keyboard to the markup
+	        rowsInline.add(rowInline6);
+	        // Add it to the message
+	        markupInline.setKeyboard(rowsInline);
+	        message.setReplyMarkup(markupInline);
+		} else {
+			this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes.toLowerCase());
+    		otroHorario(chat_id);
+		}
         
         try {
             execute(message); // Manda el objeto mensaje al usuario
