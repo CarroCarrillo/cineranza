@@ -78,7 +78,7 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		    	} else if (this.process.equals("/new_edadMinima")) {
 		    		this.film.setEdadMinima(Integer.parseInt(message_text));
 		    		
-		    		if(this.film.getEdadMinima() >= 0) {
+		    		if(this.film.getEdadMinima() > 0) {
 		    			this.process_response += EmojiParser.parseToUnicode(this.film.getEdadMinima() >= 18 ? "\n:underage: +" : "\n:no_entry_sign: +") + this.film.getEdadMinima() + " años";
 		    		}
 		    		
@@ -87,8 +87,8 @@ public class CineranzaBot extends TelegramLongPollingBot {
 		    		InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
 		            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<List<InlineKeyboardButton>>();
 		            List<InlineKeyboardButton> rowInline = new ArrayList<InlineKeyboardButton>();
-		            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":sunny: Verano")).setCallbackData("/new_cineVerano"));
 		            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":snowflake: Invierno")).setCallbackData("/new_cineInvierno"));
+		            rowInline.add(new InlineKeyboardButton().setText(EmojiParser.parseToUnicode(":sunny: Verano")).setCallbackData("/new_cineVerano"));
 		            // Set the keyboard to the markup
 		            rowsInline.add(rowInline);
 		            // Add it to the message
@@ -112,21 +112,21 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	        if (call_data.equals("/new_estrenoNacionalSi")) {
 	        	this.film.setEstrenoNacional(true);
 	        	this.process = "/new_edadMinima";
-	        	this.process_response += "\nEstreno nacional";
-	        	editMessage(chat_id, message_id, "Edad mínima:");
+	        	this.process_response += "\nEstreno Nacional";
+	        	editMessage(chat_id, message_id, "Edad mínima");
 	        } else if (call_data.equals("/new_estrenoNacionalNo")) {
 	            this.process = "/new_edadMinima";
 	            this.film.setEstrenoNacional(false);
-	            editMessage(chat_id, message_id, "Edad mínima:");
+	            editMessage(chat_id, message_id, "Edad mínima");
 	        } else if (call_data.equals("/new_cineVerano")) {
 	        	this.film.setCine(false);
 	            this.process = null;
-	            this.process_response += EmojiParser.parseToUnicode("\n:sunny: Cine de verano");
+	            this.process_response += EmojiParser.parseToUnicode("\n:sunny: Cine de Verano");
 	            mismaHora(chat_id, message_id);
 	        } else if (call_data.equals("/new_cineInvierno")) {
 	        	this.film.setCine(true);
 	            this.process = null;
-	            this.process_response += EmojiParser.parseToUnicode("\n:snowflake: Cine de invierno");
+	            this.process_response += EmojiParser.parseToUnicode("\n:snowflake: Cine de Invierno");
 	            mismaHora(chat_id, message_id);
 	        } else if(call_data.startsWith("/new_diaMes")) {
 	        	callBackDiaMes(call_data, chat_id, message_id);
@@ -135,21 +135,29 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	        } else if(call_data.equals("/new_otroHorarioSi")) {
 	        	horario(chat_id, message_id);
 	        } else if(call_data.equals("/new_otroHorarioNo")) {
-	        	this.process_response += EmojiParser.parseToUnicode("\n" + icono(call_data) + call_data.split("/new_hour")[1]);
+	        	
+	        	if(this.mismaHora) {
+	        		this.process_response += EmojiParser.parseToUnicode("\n" + icono("/new_hour" + this.hora) + this.hora);
+	        	}
+	        	
 	        	this.sendFilm(chat_id);
 	        } else if(call_data.startsWith("/new_mismaHora")) {
 	        	String mismaHoraString = call_data.split("/new_mismaHora")[1];
 	        	this.mismaHora = mismaHoraString.equals("Si") ? true : false;
-	        	nuevaMismaHora(chat_id);
-	        	horario(chat_id, message_id);
+	        	if(this.mismaHora) {
+	        		nuevaMismaHora(chat_id);
+	        	} else {
+	        		horario(chat_id, message_id);
+	        	}
 	        } else if(call_data.startsWith("/new_hour")) {
-	        	String icono = icono(call_data);
-
+	        	this.hora = call_data.split("/new_hour")[1];
 	    		if(!this.mismaHora) {
-	    			this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes.toLowerCase() + " a las " + icono + call_data.split("/new_hour")[1]);
-	    		}
-	    		
-	    		otroHorario(chat_id);
+	    			String icono = icono(call_data);
+	    			this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes + " a las " + icono + call_data.split("/new_hour")[1]);
+	    			otroHorario(chat_id);
+	    		} else {
+	    			horario(chat_id, message_id);
+	    		}    		
 	        }
 	        else {
 	        	editMessage(chat_id, message_id, "Callback erróneo.");
@@ -464,7 +472,7 @@ public class CineranzaBot extends TelegramLongPollingBot {
 	        markupInline.setKeyboard(rowsInline);
 	        message.setReplyMarkup(markupInline);
 		} else {
-			this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes.toLowerCase());
+			this.process_response += EmojiParser.parseToUnicode("\n:calendar: " + this.dia + " de " + this.mes);
     		otroHorario(chat_id);
 		}
         
